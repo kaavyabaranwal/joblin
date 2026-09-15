@@ -34,6 +34,15 @@ model Application {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
+
+// AI PARSED FIELDS
+  skills         String[]          @default([])
+  seniority      String?
+  salaryRange    String?
+  remotePolicy   String?
+  parseStatus    String            @default("pending") // pending | done | failed
+
+
   user   User   @relation(fields: [userId], references: [id])
   userId String
 }
