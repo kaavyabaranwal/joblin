@@ -45,4 +45,7 @@ model Application {
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
+
+  //for vector embeddings
+  embedding Unsupported("vector(1024)")?
 }

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './prisma';
 import { parseJobDescription } from './ai/parseJob';
+import { generateEmbedding } from './ai/embeddings';
 
 dotenv.config();
 const app = express();
@@ -28,9 +29,22 @@ app.post('/applications', async (req, res) => {
 
     // Parse in the background, then update the record
     if (jobDescription) {
-      parseJobDescription(jobDescription)
-        .then((parsed) =>
-          prisma.application.update({
+      console.log('[BG] Starting background processing for', application.id);
+
+      Promise.all([
+        parseJobDescription(jobDescription).then((r) => {
+          console.log('[BG] parseJobDescription succeeded');
+          return r;
+        }),
+        generateEmbedding(jobDescription).then((r) => {
+          console.log('[BG] generateEmbedding succeeded, length:', r.length);
+          return r;
+        }),
+      ])
+        .then(async ([parsed, embedding]) => {
+          console.log('[BG] Both succeeded, updating DB...');
+
+          await prisma.application.update({
             where: { id: application.id },
             data: {
               skills: parsed.skills,
@@ -39,14 +53,25 @@ app.post('/applications', async (req, res) => {
               remotePolicy: parsed.remotePolicy,
               parseStatus: 'done',
             },
-          })
-        )
-        .catch((err) => {
-          console.error('Parsing failed:', err);
-          prisma.application.update({
-            where: { id: application.id },
-            data: { parseStatus: 'failed' },
           });
+
+          const vectorLiteral = `[${embedding.join(',')}]`;
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Application" SET embedding = $1::vector WHERE id = $2`,
+            vectorLiteral,
+            application.id
+          );
+
+          console.log('[BG] DB update complete for', application.id);
+        })
+        .catch((err) => {
+          console.error('[BG] Parsing/embedding failed:', err);
+          prisma.application
+            .update({
+              where: { id: application.id },
+              data: { parseStatus: 'failed' },
+            })
+            .catch((e) => console.error('[BG] Failed to mark as failed:', e));
         });
     }
   } catch (err) {
@@ -67,6 +92,31 @@ app.get('/applications', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch applications' });
   }
 });
+
+// similarity search route
+app.get('/applications/:id/similar', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const results = await prisma.$queryRawUnsafe(
+      `
+      SELECT id, company, role, status,
+             1 - (embedding <=> (SELECT embedding FROM "Application" WHERE id = $1)) AS similarity
+      FROM "Application"
+      WHERE id != $1 AND embedding IS NOT NULL
+      ORDER BY embedding <=> (SELECT embedding FROM "Application" WHERE id = $1)
+      LIMIT 5
+      `,
+      id
+    );
+
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch similar applications' });
+  }
+});
+
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
