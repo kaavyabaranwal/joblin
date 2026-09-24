@@ -14,3 +14,18 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
   return embedding;
 }
+
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  const response = await voyage.embed({
+    input: texts,
+    model: 'voyage-3.5-lite',
+  });
+
+  const embeddings = response.data?.map((d) => d.embedding);
+  if (!embeddings || embeddings.length !== texts.length) {
+    throw new Error('Failed to generate embeddings batch');
+  }
+  return embeddings as number[][];
+}
