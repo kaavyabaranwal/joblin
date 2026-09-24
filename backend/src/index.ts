@@ -5,7 +5,11 @@ import { prisma } from './prisma';
 import { parseJobDescription } from './ai/parseJob';
 import { generateEmbedding } from './ai/embeddings';
 import { hashPassword, verifyPassword, generateToken, requireAuth, AuthRequest } from './auth';
+import multer from 'multer';
+import { PDFParse } from 'pdf-parse';
+import { analyzeResumeGap } from './ai/gapAnalysis';
 
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
 dotenv.config();
 const app = express();
 
@@ -171,6 +175,71 @@ app.get('/applications/:id/similar', requireAuth, async (req: AuthRequest, res) 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch similar applications' });
+  }
+});
+
+app.post('/user/resume', requireAuth, upload.single('resume'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const parser = new PDFParse({ data: req.file.buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+
+    const resumeText = result.text;
+
+    if (!resumeText || resumeText.trim().length < 50) {
+      return res.status(400).json({ error: 'Could not extract readable text from this PDF' });
+    }
+
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { resumeText },
+    });
+
+    res.json({ success: true, preview: resumeText.slice(0, 200) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process resume PDF' });
+  }
+});
+
+app.get('/user/resume', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { resumeText: true },
+    });
+    res.json({ resumeText: user?.resumeText ?? null });
+  } catch (err) {
+    console.error(err);
+   
+    res.status(500).json({ error: 'Failed to fetch resume' });
+  }
+});
+
+app.post('/applications/:id/gap-analysis', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.userId;
+
+    const application = await prisma.application.findFirst({ where: { id, userId } });
+    if (!application || !application.jobDescription) {
+      return res.status(404).json({ error: 'Application or job description not found' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.resumeText) {
+      return res.status(400).json({ error: 'No resume on file. Upload one first.' });
+    }
+
+    const analysis = await analyzeResumeGap(user.resumeText, application.skills, application.jobDescription);
+    res.json(analysis);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to analyze resume gap' });
   }
 });
 
