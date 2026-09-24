@@ -19,24 +19,50 @@ export function AuthForm({ authMode, authError, onToggleMode, onSubmit }: Props)
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: '80px auto', fontFamily: 'sans-serif' }}>
-      <h1>Joblin</h1>
-      <h2 style={{ fontSize: 18 }}>{authMode === 'login' ? 'Log in' : 'Sign up'}</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="card fade-in" style={{ width: '100%', maxWidth: 380, padding: 36 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <img src="/goblin-logo.png" alt="Joblin" style={{ width: 56, height: 56, margin: '0 auto 12px', display: 'block', borderRadius: 12 }} />
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Joblin</h1>
+          <p className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>
+            {authMode === 'login' ? 'Welcome back' : 'Track your job hunt smarter'}
+          </p>
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: 8 }} />
-        </div>
-        {authError && <div style={{ color: '#c0392b', fontSize: 13, marginBottom: 8 }}>{authError}</div>}
-        <button type="submit" style={{ width: '100%', padding: 8 }}>
-          {authMode === 'login' ? 'Log in' : 'Sign up'}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="input-field"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="input-field"
+          />
+          {authError && (
+            <div style={{ fontSize: 13, color: '#e08a8a', background: 'rgba(224, 138, 138, 0.1)', border: '1px solid rgba(224, 138, 138, 0.25)', borderRadius: 8, padding: '8px 12px' }}>
+              {authError}
+            </div>
+          )}
+          <button type="submit" className="btn-primary" style={{ justifyContent: 'center', marginTop: 4 }}>
+            {authMode === 'login' ? 'Log in' : 'Sign up'}
+          </button>
+        </form>
+
+        <button
+          onClick={onToggleMode}
+          style={{ background: 'none', border: 'none', color: '#8b6dd6', cursor: 'pointer', fontSize: 13, marginTop: 18, width: '100%', textAlign: 'center', fontFamily: 'Montserrat, sans-serif' }}
+        >
+          {authMode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
         </button>
-      </form>
-      <button onClick={onToggleMode} style={{ marginTop: 12, background: 'none', border: 'none', color: '#1a56db', cursor: 'pointer' }}>
-        {authMode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
-      </button>
+      </div>
     </div>
   );
 }

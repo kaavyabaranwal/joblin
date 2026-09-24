@@ -7,15 +7,20 @@ interface Props {
 }
 
 export function ApplicationList({ applications, token }: Props) {
+  if (applications.length === 0) {
+    return (
+      <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+        <div className="text-muted" style={{ fontSize: 14 }}>No applications yet. Add your first one above.</div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <h2>Your Applications</h2>
-      {applications.length === 0 && <p>No applications yet.</p>}
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {applications.map((app) => (
-          <ApplicationCard key={app.id} app={app} token={token} />
-        ))}
-      </ul>
-    </>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {applications.map((app) => (
+        <ApplicationCard key={app.id} app={app} token={token} />
+      ))}
+    </div>
   );
 }
