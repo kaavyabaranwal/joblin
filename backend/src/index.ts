@@ -147,7 +147,7 @@ app.get('/applications', requireAuth, async (req: AuthRequest, res) => {
 // similarity search route
 app.get('/applications/:id/similar', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.userId;
 
     // Confirm the target application actually belongs to this user
