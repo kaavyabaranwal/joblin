@@ -20,3 +20,10 @@ export interface SimilarApplication {
   status: string;
   similarity: number;
 }
+
+export interface GapAnalysisResult {
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  suggestions: Array<{ original: string; improved: string; reason: string }>;
+}

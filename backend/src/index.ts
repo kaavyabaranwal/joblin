@@ -243,6 +243,27 @@ app.post('/applications/:id/gap-analysis', requireAuth, async (req: AuthRequest,
   }
 });
 
+app.patch('/applications/:id/notes', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { notes } = req.body;
+
+    const application = await prisma.application.findFirst({ where: { id, userId: req.userId } });
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const updated = await prisma.application.update({
+      where: { id },
+      data: { notes },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update notes' });
+  }
+});
+
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
